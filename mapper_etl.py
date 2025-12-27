@@ -1,8 +1,11 @@
 import sys
+import csv
+import io
 
 for line in sys.stdin:
     line = line.strip()
-    parts = line.split(',')
+    reader = csv.reader(io.StringIO(line))
+    parts = next(reader)
     
     if len(parts) < 2 or parts[0] == 'Transaction':
         continue

@@ -1,0 +1,196 @@
+# PSEUDOCODE RECOMMENDATION ENGINE - SISTEM REKOMENDASI PRODUK
+# Big Data dan Analitik (TIF522)
+
+"""
+PSEUDOCODE UNTUK RECOMMENDATION ENGINE
+=======================================
+
+ALGORITMA: ProductRecommendationMatcher
+INPUT: File CSV dari hasil MapReduce (format: Item1,Item2,Count)
+OUTPUT: Rekomendasi produk tunggal berdasarkan frekuensi co-occurrence tertinggi
+
+PROSEDUR class RecommendationEngine:
+    
+    // LANGKAH 1: INISIALISASI ENGINE
+    FUNCTION __init__(data_file):
+        rules ← DICTIONARY kosong  // Menyimpan aturan asosiasi
+        CALL _load_data(data_file)
+    AKHIR FUNCTION
+
+    // LANGKAH 2: MEMUAT DATA DARI FILE
+    FUNCTION _load_data(filepath):
+        
+        // LANGKAH 2A: Validasi File
+        JIKA file 'filepath' TIDAK ADA MAKA:
+            CETAK "Error: File '{filepath}' not found."
+            RETURN
+        
+        // LANGKAH 2B: Buka dan Parse File CSV
+        TRY:
+            BUKA file(filepath) DENGAN mode baca (UTF-8 encoding):
+                reader ← CSV_READER(file)
+                
+                // LANGKAH 2C: Skip Header Row (Item1,Item2,Count)
+                BACA baris pertama (header) dan ABAIKAN
+                
+                // LANGKAH 2D: Iterasi Setiap Baris Data
+                UNTUK SETIAP row DALAM reader:
+                    
+                    // LANGKAH 2E: Validasi Format Row
+                    JIKA panjang(row) < 3 MAKA:
+                        LANJUT ke iterasi berikutnya
+                    
+                    // LANGKAH 2F: Ekstrak dan Parsing Field
+                    TRY:
+                        item_a ← row[0].STRIP()     // Kolom pertama (Item A)
+                        item_b ← row[1].STRIP()     // Kolom kedua (Item B)
+                        count ← CONVERT_TO_INT(row[2].STRIP())  // Kolom ketiga (Count)
+                        
+                        // LANGKAH 2G: Simpan Hubungan Bidireksional
+                        // Jika A dibeli dengan B, maka B juga dibeli dengan A
+                        CALL _add_rule(item_a, item_b, count)
+                        CALL _add_rule(item_b, item_a, count)
+                    
+                    CATCH ValueError AS e:
+                        // LANGKAH 2H: Skip baris dengan format invalid
+                        LANJUT ke iterasi berikutnya
+        
+        CATCH Exception AS e:
+            // LANGKAH 2I: Error handling untuk file operations
+            CETAK "Error loading data: {}".format(e)
+    
+    AKHIR FUNCTION
+
+    // LANGKAH 3: MENAMBAH ATURAN ASOSIASI
+    FUNCTION _add_rule(key, value, count):
+        
+        // LANGKAH 3A: Inisialisasi list jika key belum ada
+        JIKA key TIDAK ada dalam rules MAKA:
+            rules[key] ← LIST kosong
+        
+        // LANGKAH 3B: Tambahkan pasangan (value, count) ke list
+        rules[key].APPEND((value, count))
+    
+    AKHIR FUNCTION
+
+    // LANGKAH 4: MENCARI REKOMENDASI TERBAIK
+    FUNCTION recommend(item_name) RETURNS rekomendasi atau None:
+        
+        // LANGKAH 4A: Case-Insensitive Lookup
+        lookup_key ← None
+        UNTUK SETIAP key DALAM rules:
+            JIKA key.LOWERCASE() == item_name.LOWERCASE() MAKA:
+                lookup_key ← key
+                BREAK
+        
+        // LANGKAH 4B: Jika item tidak ditemukan dalam rules
+        JIKA lookup_key == None MAKA:
+            RETURN None
+        
+        // LANGKAH 4C: Ambil semua kandidat rekomendasi
+        candidates ← rules[lookup_key]  // List dari (item, count) tuples
+        
+        // LANGKAH 4D: Urutkan berdasarkan count (descending)
+        SORT candidates DENGAN key=count, order=descending
+        
+        // LANGKAH 4E: Return item dengan count tertinggi
+        JIKA candidates TIDAK kosong MAKA:
+            RETURN candidates[0][0]  // Kembalikan nama item dari pasangan terbaik
+        ELSE:
+            RETURN None
+    
+    AKHIR FUNCTION
+
+AKHIR CLASS
+
+
+PROSEDUR MAIN:
+    
+    // LANGKAH 5: VALIDASI COMMAND LINE ARGUMENTS
+    JIKA panjang(arguments) < 2 MAKA:
+        CETAK "Usage: python recommendation.py <Item Name>"
+        KELUAR DENGAN status 1
+    
+    // LANGKAH 6: AMBIL NAMA ITEM DARI ARGUMENT
+    input_item ← arguments[1]  // Nama item yang akan dicari rekomendasinya
+    
+    // LANGKAH 7: INISIALISASI ENGINE DENGAN FILE HASIL MAPREDUCE
+    engine ← BUAT RecommendationEngine('mapreduce_result.csv')
+    
+    // LANGKAH 8: CARI REKOMENDASI
+    result ← engine.recommend(input_item)
+    
+    // LANGKAH 9: OUTPUT HASIL
+    JIKA result TIDAK None MAKA:
+        CETAK result  // Cetak nama item yang direkomendasikan
+    ELSE:
+        CETAK "No recommendation found"
+
+AKHIR PROSEDUR
+
+
+CONTOH EKSEKUSI:
+================
+
+INPUT FILE (mapreduce_result.csv):
+Item1,Item2,Count
+Bread,Coffee,5
+Bread,Pastry,3
+Coffee,Milk,4
+Pastry,Milk,2
+
+PROSES INISIALISASI:
+1. Load data dari mapreduce_result.csv
+2. Row 1: Bread,Coffee,5
+   - _add_rule("Bread", "Coffee", 5) → rules["Bread"] = [("Coffee", 5)]
+   - _add_rule("Coffee", "Bread", 5) → rules["Coffee"] = [("Bread", 5)]
+3. Row 2: Bread,Pastry,3
+   - _add_rule("Bread", "Pastry", 3) → rules["Bread"] = [("Coffee", 5), ("Pastry", 3)]
+   - _add_rule("Pastry", "Bread", 3) → rules["Pastry"] = [("Bread", 3)]
+4. Row 3: Coffee,Milk,4
+   - _add_rule("Coffee", "Milk", 4) → rules["Coffee"] = [("Bread", 5), ("Milk", 4)]
+   - _add_rule("Milk", "Coffee", 4) → rules["Milk"] = [("Coffee", 4)]
+5. Row 4: Pastry,Milk,2
+   - _add_rule("Pastry", "Milk", 2) → rules["Pastry"] = [("Bread", 3), ("Milk", 2)]
+   - _add_rule("Milk", "Pastry", 2) → rules["Milk"] = [("Coffee", 4), ("Pastry", 2)]
+
+RULES HASIL LOADING:
+{
+  "Bread": [("Coffee", 5), ("Pastry", 3)],
+  "Coffee": [("Bread", 5), ("Milk", 4)],
+  "Pastry": [("Bread", 3), ("Milk", 2)],
+  "Milk": [("Coffee", 4), ("Pastry", 2)]
+}
+
+CONTOH QUERY 1:
+Command: python recommendation.py "Bread"
+1. input_item = "Bread"
+2. engine.recommend("Bread")
+3. lookup_key = "Bread" (case-insensitive match)
+4. candidates = [("Coffee", 5), ("Pastry", 3)]
+5. Sort by count descending → [("Coffee", 5), ("Pastry", 3)]
+6. Return candidates[0][0] = "Coffee"
+
+OUTPUT: Coffee
+
+CONTOH QUERY 2:
+Command: python recommendation.py "Coffee"
+1. input_item = "Coffee"
+2. engine.recommend("Coffee")
+3. lookup_key = "Coffee"
+4. candidates = [("Bread", 5), ("Milk", 4)]
+5. Sort by count descending → [("Bread", 5), ("Milk", 4)]
+6. Return candidates[0][0] = "Bread"
+
+OUTPUT: Bread
+
+CONTOH QUERY 3:
+Command: python recommendation.py "Tea"
+1. input_item = "Tea"
+2. engine.recommend("Tea")
+3. lookup_key = None (tidak ditemukan dalam rules)
+4. Return None
+
+OUTPUT: No recommendation found
+
+"""

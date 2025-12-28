@@ -65,20 +65,3 @@ OUTPUT MAPPER:
 Bread	Coffee	1
 Bread	Pastry	1
 Coffee	Pastry	1
-
-
-KOMPLEKSITAS ALGORITMA:
-========================
-- Waktu: O(n × m²) dimana:
-  n = jumlah transaksi
-  m = rata-rata jumlah item per transaksi
-  
-- Ruang: O(m) untuk menyimpan items_purchased
-
-CATATAN:
-=========
-- Format output: TAB-separated values (item1 \t item2 \t count)
-- Pasangan item diurutkan secara leksikografis untuk konsistensi
-- Setiap pasangan di-emit dengan count = 1
-- Reducer akan menjumlahkan semua count untuk setiap pasangan
-"""

@@ -115,11 +115,6 @@ PENJELASAN LOGIKA:
    - Angka ini adalah nilai support dalam market basket analysis
 
 
-KOMPLEKSITAS ALGORITMA:
-========================
-- Waktu: O(n) dimana n = jumlah baris input dari mapper
-- Ruang: O(1) hanya menyimpan current_key dan current_count
-
 KARAKTERISTIK:
 ===============
 - Single-pass algorithm (hanya 1 iterasi)
